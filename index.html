@@ -100,7 +100,9 @@
   <section id="test">
     <div class="card" id="tSetup">
       <h2>Mixed test <span class="muted" id="tHint"></span></h2>
-      <p class="muted">A mix of every topic in this year. No feedback until the end, then you get a breakdown of your weaknesses.</p>
+      <p class="muted">Choose which topics to include. No feedback until the end, then you get a breakdown of your weaknesses.</p>
+      <div class="topics" id="tTopics"></div>
+      <div class="topics"><button class="chip" id="tAll">Select all</button><button class="chip" id="tNone">Clear</button><span class="muted" id="tCount" style="padding:7px 4px"></span></div>
       <div class="topics">
         <span class="muted" style="padding:7px 4px">Questions:</span>
         <button class="chip" data-len="10">10</button>
@@ -170,7 +172,7 @@ const LABEL={none:'Not enough data',weak:'Weak',ok:'Getting there',strong:'Stron
 
 /* years & tabs */
 function renderYears(){const y=$('#years');y.innerHTML='';for(let i=1;i<=13;i++){if(STAGE[i]){const s=document.createElement('span');s.className='stage';s.textContent=STAGE[i];y.appendChild(s)}const b=document.createElement('button');b.className='chip'+(i===year?' on':'');b.textContent='Year '+i;b.onclick=()=>setYear(i);y.appendChild(b)}}
-function setYear(y){year=y;store.set('year',y);topicId=null;renderYears();renderTopics();$('#pBox').innerHTML='';$('#tSetup').style.display='';$('#tRun').style.display='none';$('#tResult').style.display='none';$('#tHint').textContent='· Year '+y;renderWeak();}
+function setYear(y){year=y;store.set('year',y);topicId=null;renderYears();renderTopics();$('#pBox').innerHTML='';$('#tSetup').style.display='';$('#tRun').style.display='none';$('#tResult').style.display='none';$('#tHint').textContent='· Year '+y;tSel=new Set();renderTestTopics();renderWeak();}
 $$('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('nav button').forEach(x=>x.classList.toggle('on',x===b));$$('main > section').forEach(s=>s.classList.toggle('on',s.id===tab));if(tab==='weak')renderWeak();placeCalc();});
 
 /* practice */
@@ -204,9 +206,14 @@ function renderQuestion(box,x,feedback,onAnswer,onNext){
 }
 
 /* test */
-let tQs=[],tIdx=0,tResults=[];
+let tQs=[],tIdx=0,tResults=[],tSel=new Set();
+function renderTestTopics(){const box=$('#tTopics');box.innerHTML='';const tp=YEARS[year].topics;if(!tSel.cleared&&![...tSel].some(id=>TOPIC[id]&&TOPIC[id].year===year))tSel=new Set(tp.map(t=>t.id));
+  tp.forEach(t=>{const b=document.createElement('button');b.className='chip'+(tSel.has(t.id)?' on':'');b.textContent=t.name;b.onclick=()=>{tSel.has(t.id)?tSel.delete(t.id):tSel.add(t.id);renderTestTopics()};box.appendChild(b)});
+  const n=tp.filter(t=>tSel.has(t.id)).length;$('#tCount').textContent=`${n} of ${tp.length} topics`;$('#tStart').disabled=!n;$('#tStart').style.opacity=n?1:.5;}
+$('#tAll').onclick=()=>{YEARS[year].topics.forEach(t=>tSel.add(t.id));renderTestTopics()};
+$('#tNone').onclick=()=>{tSel=new Set();tSel.cleared=true;renderTestTopics();};
 $$('[data-len]').forEach(b=>b.onclick=()=>{testLen=+b.dataset.len;$$('[data-len]').forEach(x=>x.classList.toggle('on',x===b))});
-$('#tStart').onclick=()=>{const tp=YEARS[year].topics;tQs=[];for(let i=0;i<testLen;i++){const t=tp[i%tp.length];tQs.push({t,x:t.gen()})}tQs.sort(()=>Math.random()-.5);tIdx=0;tResults=[];$('#tSetup').style.display='none';$('#tResult').style.display='none';$('#tRun').style.display='';$('#tLen').textContent=testLen;testQ();};
+$('#tStart').onclick=()=>{const tp=YEARS[year].topics.filter(t=>tSel.has(t.id));if(!tp.length)return;tQs=[];for(let i=0;i<testLen;i++){const t=tp[i%tp.length];tQs.push({t,x:t.gen()})}tQs.sort(()=>Math.random()-.5);tIdx=0;tResults=[];$('#tSetup').style.display='none';$('#tResult').style.display='none';$('#tRun').style.display='';$('#tLen').textContent=testLen;testQ();};
 function testQ(){if(tIdx>=tQs.length)return testDone();const {t,x}=tQs[tIdx];$('#tNum').textContent=tIdx+1;$('#tTopic').textContent=t.name;$('#tProg').style.width=(tIdx/tQs.length*100)+'%';
   renderQuestion($('#tBox'),x,false,ok=>{tResults.push({t,x,ok});record(t.id,ok)},()=>{tIdx++;testQ()});}
 function testDone(){$('#tRun').style.display='none';const R=$('#tResult');R.style.display='';
