@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maths Trainer</title>
+<style>
+  :root{--bg:#0e1a16;--panel:#15241f;--panel2:#1d3029;--line:#2a4038;--ink:#eaf5ef;--muted:#96b3a6;--accent:#4fd1a5;--accent2:#ffd166;--good:#4fd1a5;--bad:#ff6b6b;--warn:#ffb347}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  header{padding:18px 20px 6px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px}
+  header h1{margin:0;font-size:1.5rem}
+  header p{margin:0;color:var(--muted)}
+  main{padding:8px 20px 40px;max-width:1100px;margin:0 auto}
+  .years{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+  .years .stage{color:var(--muted);font-size:.8rem;margin:0 4px 0 8px}
+  .chip{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:.95rem;cursor:pointer}
+  .chip.on{background:var(--accent);color:#06231a;border-color:var(--accent);font-weight:600}
+  .chip small{opacity:.75;margin-left:6px;font-size:.75rem}
+  .chip.weak{border-color:var(--bad)} .chip.strong{border-color:var(--good)}
+  nav{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+  nav .chip.on{background:var(--accent2);border-color:var(--accent2)}
+  section{display:none} section.on{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+  .card h2{margin:0 0 8px;font-size:1.15rem}
+  .muted{color:var(--muted)}
+  .topics{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .q{font-size:1.5rem;margin:14px 0 6px;line-height:1.4}
+  .hint{color:var(--muted);font-size:.9rem}
+  .typed{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+  .typed input{flex:1;min-width:200px;font-size:1.3rem;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+  .typed input:focus{outline:2px solid var(--accent)}
+  .btn{background:var(--accent);color:#06231a;border:0;border-radius:10px;padding:10px 16px;font-size:1rem;font-weight:600;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.warn{background:var(--bad);color:#300}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+  .opts button{font-size:1.2rem;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
+  .opts button.good{background:var(--good);color:#06231a}.opts button.bad{background:var(--bad);color:#300}
+  .feedback{min-height:1.6em;margin-top:8px;font-weight:600}
+  .feedback.good{color:var(--good)}.feedback.bad{color:var(--bad)}
+  .how{color:var(--muted);font-weight:400;display:block;margin-top:4px}
+  .stats{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);align-items:center}
+  .stats b{color:var(--ink)}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:500;font-size:.85rem}
+  .bar{height:10px;background:var(--panel2);border-radius:5px;overflow:hidden;min-width:100px}
+  .bar i{display:block;height:100%;border-radius:5px}
+  .tag{border-radius:6px;padding:2px 8px;font-size:.8rem;font-weight:600;white-space:nowrap}
+  .tag.weak{background:var(--bad);color:#300}.tag.ok{background:var(--warn);color:#402}.tag.strong{background:var(--good);color:#06231a}.tag.none{background:var(--panel2);color:var(--muted)}
+  .weakbox{border-left:4px solid var(--bad);padding-left:12px;margin:8px 0}
+  .weakbox li{margin:4px 0}
+  .progress{height:6px;background:var(--panel2);border-radius:3px;margin:8px 0}
+  .progress i{display:block;height:100%;background:var(--accent2);border-radius:3px}
+  sup{font-size:.7em}
+  @media (max-width:600px){header h1{font-size:1.25rem}.q{font-size:1.25rem}}
+</style>
+</head>
+<body>
+<header>
+  <h1>➗ Maths Trainer</h1>
+  <p>Pick your year, practise any topic, then see exactly where your weak spots are.</p>
+</header>
+<main>
+  <div class="years" id="years"></div>
+  <nav>
+    <button class="chip on" data-tab="practice">Practice</button>
+    <button class="chip" data-tab="test">Test</button>
+    <button class="chip" data-tab="weak">My weaknesses</button>
+  </nav>
+
+  <section id="practice" class="on">
+    <div class="card">
+      <h2>Practice <span class="muted" id="pHint"></span></h2>
+      <p class="muted">Pick a topic. Questions never run out. Type the answer and press Enter; press Enter again for the next one.</p>
+      <div class="topics" id="topicChips"></div>
+      <div class="stats"><span>This session <b id="pScore">0</b> / <b id="pAsked">0</b></span><span>Streak <b id="pStreak">0</b></span></div>
+      <div id="pBox"></div>
+    </div>
+  </section>
+
+  <section id="test">
+    <div class="card" id="tSetup">
+      <h2>Mixed test <span class="muted" id="tHint"></span></h2>
+      <p class="muted">A mix of every topic in this year. No feedback until the end, then you get a breakdown of your weaknesses.</p>
+      <div class="topics">
+        <span class="muted" style="padding:7px 4px">Questions:</span>
+        <button class="chip" data-len="10">10</button>
+        <button class="chip on" data-len="20">20</button>
+        <button class="chip" data-len="30">30</button>
+      </div>
+      <button class="btn" id="tStart">Start test</button>
+    </div>
+    <div class="card" id="tRun" style="display:none">
+      <div class="stats"><span>Question <b id="tNum">1</b> / <b id="tLen">20</b></span><span class="muted" id="tTopic"></span></div>
+      <div class="progress"><i id="tProg" style="width:0"></i></div>
+      <div id="tBox"></div>
+    </div>
+    <div class="card" id="tResult" style="display:none"></div>
+  </section>
+
+  <section id="weak">
+    <div class="card">
+      <h2>My weaknesses</h2>
+      <p class="muted">Built from everything you've answered, on this device. "Recent" is your last 10 answers on that topic, which shows whether you're improving.</p>
+      <div id="wSummary"></div>
+    </div>
+    <div id="wYears"></div>
+    <div class="card"><button class="btn warn" id="wReset">Reset all progress</button></div>
+  </section>
+</main>
+
+<script src="engine.js"></script>
+<script>
+const {YEARS,TOPIC,check,shown}=MathsEngine;
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const store={get(k,d){try{const v=localStorage.getItem('mt.'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('mt.'+k,JSON.stringify(v))}catch(e){}}};
+let stats=store.get('stats',{}),year=store.get('year',7),tab='practice',topicId=null,testLen=20;
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt=s=>esc(s).replace(/(^|[\s(=,])-(\d)/g,'$1−$2').replace(/\^(\(?-?[0-9a-z]+\)?)/g,'<sup>$1</sup>');
+const STAGE={1:'KS1',3:'KS2',7:'KS3',10:'GCSE',12:'A-level'};
+
+/* stats helpers */
+function record(id,ok){const s=stats[id]||(stats[id]={n:0,c:0,recent:[]});s.n++;if(ok)s.c++;s.recent.push(ok?1:0);if(s.recent.length>10)s.recent.shift();store.set('stats',stats);}
+function acc(id){const s=stats[id];if(!s||!s.n)return null;return{all:s.c/s.n,recent:s.recent.reduce((a,b)=>a+b,0)/s.recent.length,n:s.n,rn:s.recent.length}}
+function status(id){const a=acc(id);if(!a||a.n<3)return'none';const v=a.n>=10?a.recent:a.all;return v<.6?'weak':v<.85?'ok':'strong'}
+const LABEL={none:'Not enough data',weak:'Weak',ok:'Getting there',strong:'Strong'};
+
+/* years & tabs */
+function renderYears(){const y=$('#years');y.innerHTML='';for(let i=1;i<=13;i++){if(STAGE[i]){const s=document.createElement('span');s.className='stage';s.textContent=STAGE[i];y.appendChild(s)}const b=document.createElement('button');b.className='chip'+(i===year?' on':'');b.textContent='Year '+i;b.onclick=()=>setYear(i);y.appendChild(b)}}
+function setYear(y){year=y;store.set('year',y);topicId=null;renderYears();renderTopics();$('#pBox').innerHTML='';$('#tSetup').style.display='';$('#tRun').style.display='none';$('#tResult').style.display='none';$('#tHint').textContent='· Year '+y;renderWeak();}
+$$('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('nav button').forEach(x=>x.classList.toggle('on',x===b));$$('main > section').forEach(s=>s.classList.toggle('on',s.id===tab));if(tab==='weak')renderWeak();});
+
+/* practice */
+let pScore=0,pAsked=0,pStreak=0,cur=null,answered=false;
+function renderTopics(){const t=$('#topicChips');t.innerHTML='';YEARS[year].topics.forEach(tp=>{const b=document.createElement('button');const st=status(tp.id),a=acc(tp.id);b.className='chip '+(st==='weak'?'weak':st==='strong'?'strong':'')+(tp.id===topicId?' on':'');b.innerHTML=esc(tp.name)+(a?`<small>${Math.round((a.n>=10?a.recent:a.all)*100)}%</small>`:'');b.onclick=()=>{topicId=tp.id;renderTopics();pScore=pAsked=pStreak=0;pStats();nextPractice()};t.appendChild(b)});$('#pHint').textContent='· Year '+year;}
+function pStats(){$('#pScore').textContent=pScore;$('#pAsked').textContent=pAsked;$('#pStreak').textContent=pStreak}
+function nextPractice(){cur=TOPIC[topicId].gen();answered=false;renderQuestion($('#pBox'),cur,true,ok=>{pAsked++;if(ok){pScore++;pStreak++}else pStreak=0;pStats();record(topicId,ok);renderTopics()},nextPractice);}
+function renderQuestion(box,x,feedback,onAnswer,onNext){
+  const hint=x.choices?'':Array.isArray(x.a)?'Separate answers with a comma.':x.hint||'';
+  box.innerHTML=`<div class="q">${fmt(x.q)}</div><div class="hint">${esc(hint)}</div>`+
+    (x.choices?`<div class="opts">${x.choices.map(c=>`<button data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>`
+             :`<div class="typed"><input id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Your answer"><button class="btn" id="go">Check</button></div>`)+
+    `<div class="feedback"></div><div id="nextRow" style="display:none;margin-top:8px"><button class="btn ghost" id="next">Next ▸</button></div>`;
+  let done=false;
+  const finish=(ok,btn)=>{if(done)return;done=true;
+    const f=box.querySelector('.feedback');
+    if(feedback){f.className='feedback '+(ok?'good':'bad');f.innerHTML=(ok?'Correct!':`Not quite. The answer is <b>${esc(shown(x))}</b>.`)+(x.how&&!ok?`<span class="how">${esc(x.how)}</span>`:'');
+      if(x.choices){box.querySelectorAll('.opts button').forEach(b=>{if(b.dataset.c===x.a)b.classList.add('good');else if(b===btn)b.classList.add('bad')})}}
+    const inp=box.querySelector('#ans');if(inp)inp.disabled=true;
+    onAnswer(ok);
+    if(feedback){box.querySelector('#nextRow').style.display='';box.querySelector('#next').onclick=onNext;box.querySelector('#next').focus();}
+    else setTimeout(onNext,150);
+  };
+  if(x.choices){box.querySelectorAll('.opts button').forEach(b=>b.onclick=()=>finish(check(x,b.dataset.c),b))}
+  else{const inp=box.querySelector('#ans');inp.focus();const go=()=>{if(!inp.value.trim())return;finish(check(x,inp.value))};box.querySelector('#go').onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()})}
+}
+
+/* test */
+let tQs=[],tIdx=0,tResults=[];
+$$('[data-len]').forEach(b=>b.onclick=()=>{testLen=+b.dataset.len;$$('[data-len]').forEach(x=>x.classList.toggle('on',x===b))});
+$('#tStart').onclick=()=>{const tp=YEARS[year].topics;tQs=[];for(let i=0;i<testLen;i++){const t=tp[i%tp.length];tQs.push({t,x:t.gen()})}tQs.sort(()=>Math.random()-.5);tIdx=0;tResults=[];$('#tSetup').style.display='none';$('#tResult').style.display='none';$('#tRun').style.display='';$('#tLen').textContent=testLen;testQ();};
+function testQ(){if(tIdx>=tQs.length)return testDone();const {t,x}=tQs[tIdx];$('#tNum').textContent=tIdx+1;$('#tTopic').textContent=t.name;$('#tProg').style.width=(tIdx/tQs.length*100)+'%';
+  renderQuestion($('#tBox'),x,false,ok=>{tResults.push({t,x,ok});record(t.id,ok)},()=>{tIdx++;testQ()});}
+function testDone(){$('#tRun').style.display='none';const R=$('#tResult');R.style.display='';
+  const byT={};tResults.forEach(r=>{const b=byT[r.t.id]||(byT[r.t.id]={t:r.t,n:0,c:0,wrong:[]});b.n++;if(r.ok)b.c++;else b.wrong.push(r.x)});
+  const rows=Object.values(byT).sort((a,b)=>a.c/a.n-b.c/b.n);const score=tResults.filter(r=>r.ok).length;
+  const weak=rows.filter(r=>r.c/r.n<.6),strong=rows.filter(r=>r.c/r.n>=.85);
+  R.innerHTML=`<h2>Result: ${score} / ${tResults.length} (${Math.round(score/tResults.length*100)}%)</h2>`+
+    (weak.length?`<div class="weakbox"><b>Work on these:</b><ul>${weak.map(r=>`<li>${esc(r.t.name)} — ${r.c}/${r.n} <button class="chip" data-practise="${r.t.id}">Practise</button></li>`).join('')}</ul></div>`:`<p class="muted">No weak topics in this test. Nice.</p>`)+
+    (strong.length?`<p class="muted">Strong: ${strong.map(r=>esc(r.t.name)).join(', ')}.</p>`:'')+
+    `<table><tr><th>Topic</th><th>Score</th><th></th></tr>${rows.map(r=>`<tr><td>${esc(r.t.name)}</td><td>${r.c}/${r.n}</td><td><span class="tag ${r.c/r.n<.6?'weak':r.c/r.n<.85?'ok':'strong'}">${r.c/r.n<.6?'Weak':r.c/r.n<.85?'OK':'Strong'}</span></td></tr>`).join('')}</table>`+
+    (tResults.some(r=>!r.ok)?`<h3 style="margin:16px 0 6px">The ones you got wrong</h3>${tResults.filter(r=>!r.ok).map(r=>`<div style="margin:6px 0"><span class="muted">${esc(r.t.name)}:</span> ${fmt(r.x.q)} <b>→ ${esc(shown(r.x))}</b>${r.x.how?`<span class="how">${esc(r.x.how)}</span>`:''}</div>`).join('')}`:'')+
+    `<div style="margin-top:14px"><button class="btn" id="tAgain">Another test</button></div>`;
+  $('#tAgain').onclick=()=>{$('#tResult').style.display='none';$('#tSetup').style.display=''};
+  R.querySelectorAll('[data-practise]').forEach(b=>b.onclick=()=>practise(b.dataset.practise));
+  renderWeak();}
+function practise(id){const t=TOPIC[id];if(t.year!==year)setYear(t.year);topicId=id;renderTopics();pScore=pAsked=pStreak=0;pStats();nextPractice();$$('nav button')[0].click();window.scrollTo(0,0);}
+
+/* weaknesses */
+function renderWeak(){
+  const all=Object.keys(stats).map(id=>({id,t:TOPIC[id],a:acc(id),st:status(id)})).filter(r=>r.t&&r.a);
+  const rated=all.filter(r=>r.a.n>=3).sort((p,q)=>(p.a.n>=10?p.a.recent:p.a.all)-(q.a.n>=10?q.a.recent:q.a.all));
+  const weak=rated.filter(r=>r.st==='weak').slice(0,6);
+  const S=$('#wSummary');
+  if(!all.length)S.innerHTML='<p class="muted">Nothing yet. Do some practice or a test and come back.</p>';
+  else if(!rated.length)S.innerHTML='<p class="muted">Answer at least 3 questions on a topic to get a rating.</p>';
+  else S.innerHTML=(weak.length?`<div class="weakbox"><b>Your weakest areas right now:</b><ul>${weak.map(r=>`<li>Year ${r.t.year}: ${esc(r.t.name)} — ${Math.round((r.a.n>=10?r.a.recent:r.a.all)*100)}% <button class="chip" data-practise="${r.id}">Practise</button></li>`).join('')}</ul></div>`:`<p style="color:var(--good)"><b>No weak topics at the moment.</b> Try a harder year or a longer test.</p>`)+
+    `<p class="muted">Rated ${rated.length} topics: ${rated.filter(r=>r.st==='strong').length} strong, ${rated.filter(r=>r.st==='ok').length} getting there, ${rated.filter(r=>r.st==='weak').length} weak.</p>`;
+  const W=$('#wYears');W.innerHTML='';
+  const years=[...new Set(all.map(r=>r.t.year))].sort((a,b)=>a-b);
+  years.forEach(y=>{const rows=YEARS[y].topics.map(t=>({id:t.id,t,a:acc(t.id),st:status(t.id)}));
+    const c=document.createElement('div');c.className='card';
+    c.innerHTML=`<h2>Year ${y}</h2><div style="overflow-x:auto"><table><tr><th>Topic</th><th>Answered</th><th>All time</th><th>Recent</th><th>Status</th><th></th></tr>`+
+      rows.map(r=>{const p=r.a?Math.round(r.a.all*100):0,rp=r.a?Math.round(r.a.recent*100):0;const col=r.st==='weak'?'var(--bad)':r.st==='ok'?'var(--warn)':r.st==='strong'?'var(--good)':'var(--muted)';
+        return`<tr><td>${esc(r.t.name)}</td><td>${r.a?r.a.n:0}</td><td><div class="bar"><i style="width:${p}%;background:${col}"></i></div><span class="muted" style="font-size:.8rem">${r.a?p+'%':'—'}</span></td><td>${r.a?rp+'%':'—'}</td><td><span class="tag ${r.st}">${LABEL[r.st]}</span></td><td><button class="chip" data-practise="${r.id}">Practise</button></td></tr>`}).join('')+`</table></div>`;
+    W.appendChild(c)});
+  $$('[data-practise]').forEach(b=>b.onclick=()=>practise(b.dataset.practise));
+}
+$('#wReset').onclick=()=>{if(confirm('Delete all your progress on this device?')){stats={};store.set('stats',stats);renderWeak();renderTopics()}};
+
+/* boot */
+setYear(year);
+</script>
+</body>
+</html>
