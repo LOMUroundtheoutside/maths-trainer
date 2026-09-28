@@ -53,6 +53,23 @@
   .progress{height:6px;background:var(--panel2);border-radius:3px;margin:8px 0}
   .progress i{display:block;height:100%;background:var(--accent2);border-radius:3px}
   sup{font-size:.7em}
+  /* calculator */
+  .calc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;width:280px;box-shadow:0 8px 30px rgba(0,0,0,.4);z-index:50}
+  .calc.float{position:fixed}
+  .calc.br{right:16px;bottom:16px}.calc.bl{left:16px;bottom:16px}.calc.tr{right:16px;top:16px}.calc.tl{left:16px;top:16px}
+  .calc.inline{position:static;box-shadow:none;margin:12px 0;width:100%;max-width:340px}
+  .calc .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;color:var(--muted);font-size:.85rem}
+  .calc .head button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:1rem}
+  .calc input{width:100%;font-size:1.25rem;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);text-align:right;font-family:ui-monospace,monospace}
+  .calc .out{text-align:right;min-height:1.5em;font-size:1.1rem;color:var(--accent2);padding:2px 4px;font-family:ui-monospace,monospace;word-break:break-all}
+  .calc .keys{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:6px}
+  .calc .keys button{padding:8px 0;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:.95rem;cursor:pointer}
+  .calc .keys button.op{background:#25403a}.calc .keys button.eq{background:var(--accent);color:#06231a;font-weight:700}
+  .calc .keys button.fn{font-size:.8rem}
+  .calcfab{position:fixed;z-index:49;background:var(--accent);color:#06231a;border:0;border-radius:999px;padding:10px 14px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .calcfab.br{right:16px;bottom:16px}.calcfab.bl{left:16px;bottom:16px}.calcfab.tr{right:16px;top:16px}.calcfab.tl{left:16px;top:16px}
+  .setrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+  .setrow .lbl{color:var(--muted);min-width:170px}
   @media (max-width:600px){header h1{font-size:1.25rem}.q{font-size:1.25rem}}
 </style>
 </head>
@@ -67,6 +84,7 @@
     <button class="chip on" data-tab="practice">Practice</button>
     <button class="chip" data-tab="test">Test</button>
     <button class="chip" data-tab="weak">My weaknesses</button>
+    <button class="chip" data-tab="settings">⚙ Settings</button>
   </nav>
 
   <section id="practice" class="on">
@@ -108,7 +126,31 @@
     <div id="wYears"></div>
     <div class="card"><button class="btn warn" id="wReset">Reset all progress</button></div>
   </section>
+
+  <section id="settings">
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="setrow"><span class="lbl">Calculator position</span>
+        <button class="chip" data-calc="br">Bottom right</button>
+        <button class="chip" data-calc="bl">Bottom left</button>
+        <button class="chip" data-calc="tr">Top right</button>
+        <button class="chip" data-calc="tl">Top left</button>
+        <button class="chip" data-calc="inline">Under the question</button>
+        <button class="chip" data-calc="hidden">Hidden</button>
+      </div>
+      <div class="setrow"><span class="lbl">Angles for sin, cos, tan</span>
+        <button class="chip" data-ang="deg">Degrees</button>
+        <button class="chip" data-ang="rad">Radians</button>
+      </div>
+      <div class="setrow"><span class="lbl">Calculator in tests</span>
+        <button class="chip" data-tcalc="1">Allowed</button>
+        <button class="chip" data-tcalc="0">Hidden during tests</button>
+      </div>
+      <p class="muted">Settings are saved on this device.</p>
+    </div>
+  </section>
 </main>
+<div id="calcHost"></div>
 
 <script src="engine.js"></script>
 <script>
@@ -129,7 +171,7 @@ const LABEL={none:'Not enough data',weak:'Weak',ok:'Getting there',strong:'Stron
 /* years & tabs */
 function renderYears(){const y=$('#years');y.innerHTML='';for(let i=1;i<=13;i++){if(STAGE[i]){const s=document.createElement('span');s.className='stage';s.textContent=STAGE[i];y.appendChild(s)}const b=document.createElement('button');b.className='chip'+(i===year?' on':'');b.textContent='Year '+i;b.onclick=()=>setYear(i);y.appendChild(b)}}
 function setYear(y){year=y;store.set('year',y);topicId=null;renderYears();renderTopics();$('#pBox').innerHTML='';$('#tSetup').style.display='';$('#tRun').style.display='none';$('#tResult').style.display='none';$('#tHint').textContent='· Year '+y;renderWeak();}
-$$('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('nav button').forEach(x=>x.classList.toggle('on',x===b));$$('main > section').forEach(s=>s.classList.toggle('on',s.id===tab));if(tab==='weak')renderWeak();});
+$$('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('nav button').forEach(x=>x.classList.toggle('on',x===b));$$('main > section').forEach(s=>s.classList.toggle('on',s.id===tab));if(tab==='weak')renderWeak();placeCalc();});
 
 /* practice */
 let pScore=0,pAsked=0,pStreak=0,cur=null,answered=false;
@@ -138,7 +180,7 @@ const OOPS=['Good luck next time! 🍀','Not this time, keep going! 💪','Nearl
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 function renderTopics(){const t=$('#topicChips');t.innerHTML='';YEARS[year].topics.forEach(tp=>{const b=document.createElement('button');const st=status(tp.id),a=acc(tp.id);b.className='chip '+(st==='weak'?'weak':st==='strong'?'strong':'')+(tp.id===topicId?' on':'');b.innerHTML=esc(tp.name)+(a?`<small>${Math.round((a.n>=10?a.recent:a.all)*100)}%</small>`:'');b.onclick=()=>{topicId=tp.id;renderTopics();pScore=pAsked=pStreak=0;pStats();nextPractice()};t.appendChild(b)});$('#pHint').textContent='· Year '+year;}
 function pStats(){$('#pScore').textContent=pScore;$('#pAsked').textContent=pAsked;$('#pStreak').textContent=pStreak}
-function nextPractice(){cur=TOPIC[topicId].gen();cur.topicHint=TOPIC[topicId].hint;answered=false;renderQuestion($('#pBox'),cur,true,(ok,hinted)=>{pAsked++;if(ok){pScore++;pStreak++}else pStreak=0;pStats();if(!hinted){record(topicId,ok);renderTopics()}},nextPractice);}
+function nextPractice(){if(SET.calc==='inline')$$('.calc').forEach(e=>e.remove());cur=TOPIC[topicId].gen();cur.topicHint=TOPIC[topicId].hint;answered=false;renderQuestion($('#pBox'),cur,true,(ok,hinted)=>{pAsked++;if(ok){pScore++;pStreak++}else pStreak=0;pStats();if(!hinted){record(topicId,ok);renderTopics()}},nextPractice);if(SET.calc==='inline')placeCalc();}
 function renderQuestion(box,x,feedback,onAnswer,onNext){
   const hint=x.choices?'':Array.isArray(x.a)?'Separate answers with a comma.':x.hint||'';
   box.innerHTML=`<div class="q">${fmt(x.q)}</div><div class="hint">${esc(hint)}</div>`+
@@ -204,8 +246,62 @@ function renderWeak(){
 }
 $('#wReset').onclick=()=>{if(confirm('Delete all your progress on this device?')){stats={};store.set('stats',stats);renderWeak();renderTopics()}};
 
+/* calculator */
+const SET=Object.assign({calc:'br',ang:'deg',tcalc:1},store.get('settings',{}));
+function saveSet(){store.set('settings',SET);renderSettings();placeCalc()}
+function renderSettings(){$$('[data-calc]').forEach(b=>b.classList.toggle('on',b.dataset.calc===SET.calc));$$('[data-ang]').forEach(b=>b.classList.toggle('on',b.dataset.ang===SET.ang));$$('[data-tcalc]').forEach(b=>b.classList.toggle('on',+b.dataset.tcalc===+SET.tcalc))}
+$$('[data-calc]').forEach(b=>b.onclick=()=>{SET.calc=b.dataset.calc;saveSet()});
+$$('[data-ang]').forEach(b=>b.onclick=()=>{SET.ang=b.dataset.ang;saveSet()});
+$$('[data-tcalc]').forEach(b=>b.onclick=()=>{SET.tcalc=+b.dataset.tcalc;saveSet()});
+
+/* safe expression evaluator: numbers, + - * / ^ %, brackets, functions, pi, e, ans */
+function calcEval(src,ans){
+  const s=src.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/π/g,'pi').replace(/√/g,'sqrt').replace(/²/g,'^2').replace(/\s+/g,'').replace(/(\d|\))(?=\(|[a-df-z]|e(?!\d))/g,'$1*').replace(/(pi|ans)(?=\(|\d)/g,'$1*');
+  let i=0;const peek=()=>s[i],next=()=>s[i++];
+  const D=SET.ang==='deg'?Math.PI/180:1;
+  const FN={sin:x=>Math.sin(x*D),cos:x=>Math.cos(x*D),tan:x=>Math.tan(x*D),asin:x=>Math.asin(x)/D,acos:x=>Math.acos(x)/D,atan:x=>Math.atan(x)/D,sqrt:Math.sqrt,ln:Math.log,log:Math.log10,abs:Math.abs};
+  function expr(){let v=term();while(peek()==='+'||peek()==='-'){const o=next();const r=term();v=o==='+'?v+r:v-r}return v}
+  function term(){let v=unary();while(peek()==='*'||peek()==='/'||peek()==='%'){const o=next();const r=unary();v=o==='*'?v*r:o==='/'?v/r:v%r}return v}
+  function unary(){if(peek()==='-'){next();return -unary()}if(peek()==='+'){next();return unary()}return power()}
+  function power(){let v=postfix();if(peek()==='^'){next();v=v**unary()}return v}
+  function postfix(){let v=atom();while(peek()==='!'){next();let f=1;for(let k=2;k<=v;k++)f*=k;v=f}return v}
+  function atom(){
+    if(peek()==='('){next();const v=expr();if(next()!==')')throw 0;return v}
+    const m=s.slice(i).match(/^(\d+\.?\d*|\.\d+)(e-?\d+)?/);if(m){i+=m[0].length;return +m[0]}
+    const w=s.slice(i).match(/^[a-z]+/);if(w){i+=w[0].length;const n=w[0];
+      if(n==='pi')return Math.PI;if(n==='e')return Math.E;if(n==='ans')return ans;
+      if(FN[n]){let a;if(peek()==='('){next();a=expr();if(next()!==')')throw 0}else a=unary();return FN[n](a)}
+      throw 0}
+    throw 0}
+  const v=expr();if(i!==s.length||!isFinite(v))throw 0;return v;
+}
+let calcAns=0,calcOpen=true;
+function buildCalc(){
+  const host=$('#calcHost');host.innerHTML='';
+  if(SET.calc==='hidden')return;
+  if((tab==='test'&&!SET.tcalc)||tab==='settings'&&false){return}
+  const inline=SET.calc==='inline';
+  if(!inline&&!calcOpen){const f=document.createElement('button');f.className='calcfab '+SET.calc;f.textContent='🧮 Calculator';f.onclick=()=>{calcOpen=true;placeCalc()};host.appendChild(f);return}
+  const c=document.createElement('div');c.className='calc '+(inline?'inline':'float '+SET.calc);
+  const keys=[['(',')','^','√','C'],['sin','cos','tan','π','⌫'],['7','8','9','÷','x²'],['4','5','6','×','ln'],['1','2','3','−','log'],['0','.','ans','+','=']];
+  c.innerHTML=`<div class="head"><span>🧮 Calculator (${SET.ang==='deg'?'DEG':'RAD'})</span>${inline?'':'<button title="Minimise" id="calcMin">—</button>'}</div>
+    <input id="calcIn" autocomplete="off" spellcheck="false" placeholder="e.g. 3^2 + sqrt(16)"><div class="out" id="calcOut"></div>
+    <div class="keys">${keys.flat().map(k=>`<button data-k="${k}" class="${k==='='?'eq':/^[+−×÷^]$/.test(k)?'op':/^[a-z√π²]/.test(k)||k==='x²'?'fn':''}">${k}</button>`).join('')}</div>`;
+  (inline?($('#pBox')||host):host).appendChild(c);
+  const inp=c.querySelector('#calcIn'),out=c.querySelector('#calcOut');
+  const run=()=>{try{const v=calcEval(inp.value,calcAns);calcAns=v;out.textContent='= '+(Math.abs(v)<1e-10?0:+v.toPrecision(12))}catch(e){out.textContent=inp.value?'…':''}};
+  c.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;
+    if(k==='C'){inp.value='';out.textContent=''}else if(k==='⌫')inp.value=inp.value.slice(0,-1);else if(k==='='){run();if(out.textContent.startsWith('='))inp.value=out.textContent.slice(2)}
+    else if(k==='x²')inp.value+='²';else if(/^(sin|cos|tan|ln|log)$/.test(k))inp.value+=k+'(';else inp.value+=k;
+    inp.focus();if(k!=='=')run()});
+  inp.addEventListener('input',run);inp.addEventListener('keydown',e=>{if(e.key==='Enter'){run();if(out.textContent.startsWith('='))inp.value=out.textContent.slice(2)}});
+  const mn=c.querySelector('#calcMin');if(mn)mn.onclick=()=>{calcOpen=false;placeCalc()};
+}
+function placeCalc(){$$('.calc, .calcfab').forEach(e=>e.remove());buildCalc()}
+
 /* boot */
-setYear(year);
+renderSettings();
+setYear(year);placeCalc();
 </script>
 </body>
 </html>
