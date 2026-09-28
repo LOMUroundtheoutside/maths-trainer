@@ -72,7 +72,7 @@
   <section id="practice" class="on">
     <div class="card">
       <h2>Practice <span class="muted" id="pHint"></span></h2>
-      <p class="muted">Pick a topic. Questions never run out. Type the answer and press Enter; press Enter again for the next one.</p>
+      <p class="muted">Pick a topic. Questions never run out. Stuck? Press Hint for the method (hinted answers don't count towards your stats).</p>
       <div class="topics" id="topicChips"></div>
       <div class="stats"><span>This session <b id="pScore">0</b> / <b id="pAsked">0</b></span><span>Streak <b id="pStreak">0</b></span></div>
       <div id="pBox"></div>
@@ -133,22 +133,27 @@ $$('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$('nav button').fo
 
 /* practice */
 let pScore=0,pAsked=0,pStreak=0,cur=null,answered=false;
+const CHEER=['Good job! 🎉','Nice one! ✅','Spot on! ⭐','Brilliant! 🙌','You\'ve got this! 💪','Yes! Keep it up! 🔥'];
+const OOPS=['Good luck next time! 🍀','Not this time, keep going! 💪','Nearly, have another go on the next one! 👍','Don\'t give up! 🌱','Everyone gets some wrong. On to the next! 🚀'];
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
 function renderTopics(){const t=$('#topicChips');t.innerHTML='';YEARS[year].topics.forEach(tp=>{const b=document.createElement('button');const st=status(tp.id),a=acc(tp.id);b.className='chip '+(st==='weak'?'weak':st==='strong'?'strong':'')+(tp.id===topicId?' on':'');b.innerHTML=esc(tp.name)+(a?`<small>${Math.round((a.n>=10?a.recent:a.all)*100)}%</small>`:'');b.onclick=()=>{topicId=tp.id;renderTopics();pScore=pAsked=pStreak=0;pStats();nextPractice()};t.appendChild(b)});$('#pHint').textContent='· Year '+year;}
 function pStats(){$('#pScore').textContent=pScore;$('#pAsked').textContent=pAsked;$('#pStreak').textContent=pStreak}
-function nextPractice(){cur=TOPIC[topicId].gen();answered=false;renderQuestion($('#pBox'),cur,true,ok=>{pAsked++;if(ok){pScore++;pStreak++}else pStreak=0;pStats();record(topicId,ok);renderTopics()},nextPractice);}
+function nextPractice(){cur=TOPIC[topicId].gen();cur.topicHint=TOPIC[topicId].hint;answered=false;renderQuestion($('#pBox'),cur,true,(ok,hinted)=>{pAsked++;if(ok){pScore++;pStreak++}else pStreak=0;pStats();if(!hinted){record(topicId,ok);renderTopics()}},nextPractice);}
 function renderQuestion(box,x,feedback,onAnswer,onNext){
   const hint=x.choices?'':Array.isArray(x.a)?'Separate answers with a comma.':x.hint||'';
   box.innerHTML=`<div class="q">${fmt(x.q)}</div><div class="hint">${esc(hint)}</div>`+
     (x.choices?`<div class="opts">${x.choices.map(c=>`<button data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>`
              :`<div class="typed"><input id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Your answer"><button class="btn" id="go">Check</button></div>`)+
+    (feedback&&x.topicHint?`<div style="margin:6px 0"><button class="btn ghost" id="hintBtn">💡 Hint</button><div class="hint" id="hintText" style="display:none;margin-top:6px"></div></div>`:'')+
     `<div class="feedback"></div><div id="nextRow" style="display:none;margin-top:8px"><button class="btn ghost" id="next">Next ▸</button></div>`;
-  let done=false;
+  let done=false,usedHint=false;
+  const hb=box.querySelector('#hintBtn');if(hb)hb.onclick=()=>{usedHint=true;hb.disabled=true;const ht=box.querySelector('#hintText');ht.style.display='';ht.innerHTML='💡 '+esc(x.topicHint)+' <span class="muted">(hint used, so this one won\'t count towards your stats)</span>';box.querySelector('#ans')?.focus()};
   const finish=(ok,btn)=>{if(done)return;done=true;
     const f=box.querySelector('.feedback');
-    if(feedback){f.className='feedback '+(ok?'good':'bad');f.innerHTML=(ok?'Correct!':`Not quite. The answer is <b>${esc(shown(x))}</b>.`)+(x.how&&!ok?`<span class="how">${esc(x.how)}</span>`:'');
+    if(feedback){f.className='feedback '+(ok?'good':'bad');f.innerHTML=(ok?rnd(CHEER):`${rnd(OOPS)} The answer is <b>${fmt(shown(x))}</b>.`)+(x.how&&!ok?`<span class="how">${fmt(x.how)}</span>`:'');
       if(x.choices){box.querySelectorAll('.opts button').forEach(b=>{if(b.dataset.c===x.a)b.classList.add('good');else if(b===btn)b.classList.add('bad')})}}
     const inp=box.querySelector('#ans');if(inp)inp.disabled=true;
-    onAnswer(ok);
+    onAnswer(ok,usedHint);
     if(feedback){box.querySelector('#nextRow').style.display='';box.querySelector('#next').onclick=onNext;box.querySelector('#next').focus();}
     else setTimeout(onNext,150);
   };
@@ -170,7 +175,7 @@ function testDone(){$('#tRun').style.display='none';const R=$('#tResult');R.styl
     (weak.length?`<div class="weakbox"><b>Work on these:</b><ul>${weak.map(r=>`<li>${esc(r.t.name)} — ${r.c}/${r.n} <button class="chip" data-practise="${r.t.id}">Practise</button></li>`).join('')}</ul></div>`:`<p class="muted">No weak topics in this test. Nice.</p>`)+
     (strong.length?`<p class="muted">Strong: ${strong.map(r=>esc(r.t.name)).join(', ')}.</p>`:'')+
     `<table><tr><th>Topic</th><th>Score</th><th></th></tr>${rows.map(r=>`<tr><td>${esc(r.t.name)}</td><td>${r.c}/${r.n}</td><td><span class="tag ${r.c/r.n<.6?'weak':r.c/r.n<.85?'ok':'strong'}">${r.c/r.n<.6?'Weak':r.c/r.n<.85?'OK':'Strong'}</span></td></tr>`).join('')}</table>`+
-    (tResults.some(r=>!r.ok)?`<h3 style="margin:16px 0 6px">The ones you got wrong</h3>${tResults.filter(r=>!r.ok).map(r=>`<div style="margin:6px 0"><span class="muted">${esc(r.t.name)}:</span> ${fmt(r.x.q)} <b>→ ${esc(shown(r.x))}</b>${r.x.how?`<span class="how">${esc(r.x.how)}</span>`:''}</div>`).join('')}`:'')+
+    (tResults.some(r=>!r.ok)?`<h3 style="margin:16px 0 6px">The ones you got wrong</h3>${tResults.filter(r=>!r.ok).map(r=>`<div style="margin:6px 0"><span class="muted">${esc(r.t.name)}:</span> ${fmt(r.x.q)} <b>→ ${fmt(shown(r.x))}</b>${r.x.how?`<span class="how">${fmt(r.x.how)}</span>`:''}</div>`).join('')}`:'')+
     `<div style="margin-top:14px"><button class="btn" id="tAgain">Another test</button></div>`;
   $('#tAgain').onclick=()=>{$('#tResult').style.display='none';$('#tSetup').style.display=''};
   R.querySelectorAll('[data-practise]').forEach(b=>b.onclick=()=>practise(b.dataset.practise));
